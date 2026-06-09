@@ -4,7 +4,7 @@ const PASSWORD = "Idris";
 
 const i18n = {
   en: {
-    appName: "Family Tree",
+    appName: "Özmen Family Tree",
     search: "Search names",
     view: "View",
     edit: "Edit",
@@ -27,6 +27,8 @@ const i18n = {
     selected: "Selected person",
     noSelection: "Select a person to see details.",
     addSpouse: "Add spouse",
+    addFather: "Add father",
+    addMother: "Add mother",
     addSon: "Add son",
     addDaughter: "Add daughter",
     addChild: "Add child",
@@ -41,12 +43,15 @@ const i18n = {
     notes: "Notes",
     photo: "Photo",
     spouse: "Spouse",
+    parents: "Parents",
+    noParentsRecorded: "No parents recorded",
     children: "Children",
     parentChild: "Parent-child",
     secondParent: "Second parent",
     unknownParent: "Unknown parent",
     chooseParent: "Search or choose parent",
     alsoCreateSpouse: "Also create spouse/partner connection",
+    alsoCreateParentSpouse: "Also create spouse/partner connection with existing parent",
     noMatches: "No matching names",
     matches: "matches",
     addRelative: "Add relative",
@@ -59,7 +64,7 @@ const i18n = {
     confirmDelete: "Delete this person and their relationships?",
   },
   tr: {
-    appName: "Family Tree",
+    appName: "Özmen Aile Ağacı",
     search: "Isim ara",
     view: "Gorunum",
     edit: "Duzenle",
@@ -82,6 +87,8 @@ const i18n = {
     selected: "Secili kisi",
     noSelection: "Ayrintilari gormek icin bir kisi secin.",
     addSpouse: "Es ekle",
+    addFather: "Baba ekle",
+    addMother: "Anne ekle",
     addSon: "Oğul ekle",
     addDaughter: "Kız ekle",
     addChild: "Cocuk ekle",
@@ -96,12 +103,15 @@ const i18n = {
     notes: "Notlar",
     photo: "Fotograf",
     spouse: "Es",
+    parents: "Ebeveynler",
+    noParentsRecorded: "Kayitli ebeveyn yok",
     children: "Cocuklar",
     parentChild: "Ebeveyn-cocuk",
     secondParent: "Ikinci ebeveyn",
     unknownParent: "Bilinmeyen ebeveyn",
     chooseParent: "Ebeveyn ara veya sec",
     alsoCreateSpouse: "Es/partner baglantisi da olustur",
+    alsoCreateParentSpouse: "Mevcut ebeveyn ile es/partner baglantisi da olustur",
     noMatches: "Eslestirme bulunamadi",
     matches: "eslesme",
     addRelative: "Akraba ekle",
@@ -278,6 +288,10 @@ function applyTheme() {
   document.documentElement.dataset.theme = state.theme;
 }
 
+function syncDocumentTitle() {
+  document.title = t("appName");
+}
+
 function loadData() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -378,6 +392,10 @@ function isChildKind(kind = state.addKind) {
   return kind === "son" || kind === "daughter" || kind === "child";
 }
 
+function isParentKind(kind = state.addKind) {
+  return kind === "father" || kind === "mother";
+}
+
 function isSpousePair(firstId, secondId) {
   if (!firstId || !secondId) return false;
   return state.data.relationships.some((rel) => rel.type === "spouse" && ((rel.from === firstId && rel.to === secondId) || (rel.from === secondId && rel.to === firstId)));
@@ -454,6 +472,10 @@ function addRelative(formData) {
   const selected = byId(state.selectedId);
   if (!selected) return;
   snapshot();
+  if (isParentKind()) {
+    addParentRelative(selected, formData);
+    return;
+  }
   const isChild = isChildKind();
   const secondParent = isChild ? byId(formData.secondParentId) : null;
   const childCount = childrenOf(selected.id).length;
@@ -484,6 +506,34 @@ function addRelative(formData) {
   state.showAdd = false;
   persist();
   fitToPeople([newPerson], 260);
+  render();
+}
+
+function addParentRelative(selected, formData) {
+  const existingParents = parentsOf(selected.id);
+  const existingParent = existingParents[0];
+  const isFather = state.addKind === "father";
+  const newParent = {
+    id: uniqueId("p"),
+    name: formData.name || t("personName"),
+    gender: isFather ? "male" : "female",
+    birthDate: formData.birthDate,
+    deathDate: formData.deathDate,
+    notes: formData.notes,
+    photoUrl: formData.photoUrl,
+    x: existingParent ? existingParent.x + (isFather ? -280 : 280) : selected.x + (isFather ? -140 : 140),
+    y: existingParent ? existingParent.y : selected.y - 270,
+  };
+  state.data.people.push(newParent);
+  state.data.relationships.push({ id: uniqueId("r"), type: "parentChild", from: newParent.id, to: selected.id });
+  if (existingParent && formData.createParentSpouse === "on" && !isSpousePair(newParent.id, existingParent.id)) {
+    state.data.relationships.push({ id: uniqueId("r"), type: "spouse", from: newParent.id, to: existingParent.id });
+  }
+  state.selectedId = selected.id;
+  state.highlightedIds = new Set([newParent.id, selected.id]);
+  state.showAdd = false;
+  persist();
+  fitToPeople([newParent, selected], 220);
   render();
 }
 
@@ -582,6 +632,7 @@ function childConnectorEntries() {
 
 function render(options = {}) {
   applyTheme();
+  syncDocumentTitle();
   const selected = byId(state.selectedId);
   const matches = getMatches();
   app.innerHTML = `
@@ -712,6 +763,7 @@ function renderInspector(person) {
     return `<aside class="inspector"><div class="empty-panel">${t("noSelection")}</div></aside>`;
   }
   const spouses = spousesOf(person.id);
+  const parents = parentsOf(person.id);
   const children = childrenOf(person.id);
   return `
     <aside class="inspector">
@@ -735,6 +787,10 @@ function renderInspector(person) {
           <label class="photo-input">${t("photo")}<input name="photo" type="file" accept="image/*" ${state.editMode ? "" : "disabled"} /></label>
         </form>
         <div class="relation-group">
+          <h3>${t("parents")}</h3>
+          ${parents.length ? parents.map(linkPerson).join("") : `<p class="muted">${t("noParentsRecorded")}</p>`}
+        </div>
+        <div class="relation-group">
           <h3>${t("spouse")}</h3>
           ${spouses.length ? spouses.map(linkPerson).join("") : `<p class="muted">—</p>`}
         </div>
@@ -744,6 +800,8 @@ function renderInspector(person) {
         </div>
         <div class="edit-actions ${state.editMode ? "enabled" : ""}">
           <button data-add-kind="spouse">${t("addSpouse")}</button>
+          <button data-add-kind="father">${t("addFather")}</button>
+          <button data-add-kind="mother">${t("addMother")}</button>
           <button data-add-kind="son">${t("addSon")}</button>
           <button data-add-kind="daughter">${t("addDaughter")}</button>
           <button data-add-kind="child">${t("addChild")}</button>
@@ -780,10 +838,12 @@ function renderPasswordModal() {
 }
 
 function renderAddModal() {
-  const gender = state.addKind === "son" ? "male" : state.addKind === "daughter" ? "female" : "unknown";
+  const gender = state.addKind === "son" || state.addKind === "father" ? "male" : state.addKind === "daughter" || state.addKind === "mother" ? "female" : "unknown";
   const selected = byId(state.selectedId);
   const defaultSecondParent = selected ? spousesOf(selected.id)[0] : null;
   const showParentFields = isChildKind();
+  const existingParent = selected ? parentsOf(selected.id)[0] : null;
+  const showExistingParentSpouse = isParentKind() && Boolean(existingParent);
   const secondParentOptions = selected
     ? state.data.people
         .filter((person) => person.id !== selected.id)
@@ -795,9 +855,13 @@ function renderAddModal() {
       <form class="modal add-modal">
         <h2>${t("addRelative")}</h2>
         <label>${t("name")}<input name="name" required placeholder="${t("personName")}" /></label>
-        <label>${t("gender")}<select name="gender">
-          ${["male", "female", "unknown"].map((item) => `<option value="${item}" ${gender === item ? "selected" : ""}>${t(item)}</option>`).join("")}
-        </select></label>
+        ${
+          isParentKind()
+            ? `<input name="gender" type="hidden" value="${gender}" />`
+            : `<label>${t("gender")}<select name="gender">
+                ${["male", "female", "unknown"].map((item) => `<option value="${item}" ${gender === item ? "selected" : ""}>${t(item)}</option>`).join("")}
+              </select></label>`
+        }
         <label>${t("birthDate")}<input name="birthDate" /></label>
         <label>${t("deathDate")}<input name="deathDate" /></label>
         <label>${t("notes")}<textarea name="notes"></textarea></label>
@@ -811,6 +875,14 @@ function renderAddModal() {
               <label class="checkbox-row create-spouse-row ${defaultSecondParent || !selected ? "hidden" : ""}">
                 <input name="createSpouse" type="checkbox" />
                 <span>${t("alsoCreateSpouse")}</span>
+              </label>`
+            : ""
+        }
+        ${
+          showExistingParentSpouse
+            ? `<label class="checkbox-row">
+                <input name="createParentSpouse" type="checkbox" />
+                <span>${t("alsoCreateParentSpouse")}</span>
               </label>`
             : ""
         }
