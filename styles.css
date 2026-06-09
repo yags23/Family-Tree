@@ -18,6 +18,24 @@
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #15110d;
+  --paper-deep: #261d14;
+  --ink: #f6ead0;
+  --muted: #c7b899;
+  --teal: #51c4b8;
+  --teal-dark: #0f6b66;
+  --sage: #91ad86;
+  --gold: #d5a64b;
+  --gold-soft: #f0cf78;
+  --burgundy: #c05267;
+  --blue: #7ea7bd;
+  --rose: #d98696;
+  --line: rgba(230, 204, 150, 0.18);
+  --shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -32,6 +50,14 @@ body {
     radial-gradient(circle at 12% 0%, rgba(236, 209, 139, 0.32), transparent 32rem),
     var(--paper);
   color: var(--ink);
+}
+
+:root[data-theme="dark"] body {
+  background:
+    linear-gradient(90deg, rgba(213, 166, 75, 0.08) 1px, transparent 1px) 0 0 / 36px 36px,
+    linear-gradient(rgba(81, 196, 184, 0.04) 1px, transparent 1px) 0 0 / 36px 36px,
+    radial-gradient(circle at 12% 0%, rgba(15, 107, 102, 0.28), transparent 34rem),
+    var(--paper);
 }
 
 button,
@@ -67,6 +93,11 @@ button {
   backdrop-filter: blur(14px);
 }
 
+:root[data-theme="dark"] .topbar {
+  background: rgba(22, 17, 13, 0.94);
+  border-bottom-color: rgba(213, 166, 75, 0.3);
+}
+
 .topbar::after {
   content: "";
   position: absolute;
@@ -92,6 +123,14 @@ button {
     linear-gradient(-45deg, transparent 42%, rgba(15, 107, 102, 0.75) 43% 57%, transparent 58%),
     #fff9ec;
   box-shadow: inset 0 0 0 6px rgba(15, 107, 102, 0.11), 0 8px 22px rgba(32, 23, 19, 0.14);
+}
+
+:root[data-theme="dark"] .brand-mark {
+  background:
+    linear-gradient(45deg, transparent 42%, rgba(213, 166, 75, 0.78) 43% 57%, transparent 58%),
+    linear-gradient(-45deg, transparent 42%, rgba(81, 196, 184, 0.68) 43% 57%, transparent 58%),
+    #211910;
+  box-shadow: inset 0 0 0 6px rgba(81, 196, 184, 0.13), 0 8px 22px rgba(0, 0, 0, 0.32);
 }
 
 h1,
@@ -135,6 +174,12 @@ p {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
 }
 
+:root[data-theme="dark"] .search-wrap input {
+  border-color: rgba(246, 234, 208, 0.16);
+  background: #211a13;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
 .search-wrap input:focus {
   border-color: var(--teal);
   box-shadow: 0 0 0 3px rgba(15, 107, 102, 0.16);
@@ -142,7 +187,7 @@ p {
 
 .icon-button,
 .tool,
-.language-toggle,
+.preference-toggle,
 .mode-button,
 .modal-actions button,
 .edit-actions button {
@@ -152,6 +197,18 @@ p {
   background: #fff8e8;
   color: var(--ink);
   box-shadow: 0 6px 18px rgba(32, 23, 19, 0.08);
+}
+
+:root[data-theme="dark"] .icon-button,
+:root[data-theme="dark"] .tool,
+:root[data-theme="dark"] .preference-toggle,
+:root[data-theme="dark"] .mode-button,
+:root[data-theme="dark"] .modal-actions button,
+:root[data-theme="dark"] .edit-actions button {
+  border-color: rgba(246, 234, 208, 0.16);
+  background: #211a13;
+  color: var(--ink);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
 }
 
 .icon-button:disabled,
@@ -175,16 +232,43 @@ p {
 }
 
 .label-tool,
-.language-toggle,
+.preference-toggle,
 .mode-button {
   padding: 0 13px;
   font-size: 0.82rem;
   font-weight: 750;
 }
 
-.language-toggle {
+.preference-toggle {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  gap: 7px;
+  align-items: center;
   background: var(--teal-dark);
   color: #fff8e8;
+}
+
+.preference-toggle span {
+  opacity: 0.78;
+  font-size: 0.72rem;
+}
+
+.preference-toggle strong {
+  font-size: 0.82rem;
+}
+
+.theme-toggle {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+:root[data-theme="dark"] .preference-toggle {
+  background: rgba(81, 196, 184, 0.18);
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .theme-toggle {
+  background: rgba(213, 166, 75, 0.18);
 }
 
 .mode-button {
@@ -216,6 +300,11 @@ p {
   border-radius: var(--radius);
   background: rgba(255, 250, 240, 0.98);
   box-shadow: var(--shadow);
+}
+
+:root[data-theme="dark"] .search-menu {
+  border-color: rgba(213, 166, 75, 0.26);
+  background: rgba(26, 20, 15, 0.98);
 }
 
 .search-menu.open {
@@ -274,6 +363,13 @@ mark {
     linear-gradient(rgba(184, 134, 45, 0.08) 1px, transparent 1px) 0 0 / 72px 72px,
     linear-gradient(90deg, rgba(184, 134, 45, 0.08) 1px, transparent 1px) 0 0 / 72px 72px,
     radial-gradient(circle at center, rgba(255, 255, 255, 0.35), transparent 44rem);
+}
+
+:root[data-theme="dark"] .canvas-bg {
+  background:
+    linear-gradient(rgba(213, 166, 75, 0.09) 1px, transparent 1px) 0 0 / 72px 72px,
+    linear-gradient(90deg, rgba(213, 166, 75, 0.09) 1px, transparent 1px) 0 0 / 72px 72px,
+    radial-gradient(circle at center, rgba(81, 196, 184, 0.1), transparent 46rem);
 }
 
 .tree-canvas {
@@ -356,6 +452,25 @@ mark {
   background: linear-gradient(180deg, #fffdf5, #e7dfca);
 }
 
+:root[data-theme="dark"] .person-card {
+  border-color: #090706;
+  background: linear-gradient(180deg, #2d2419, #1c1712);
+  color: var(--ink);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .person-card.male {
+  background: linear-gradient(180deg, #23323a, #18242a);
+}
+
+:root[data-theme="dark"] .person-card.female {
+  background: linear-gradient(180deg, #3a242b, #24181d);
+}
+
+:root[data-theme="dark"] .person-card.unknown {
+  background: linear-gradient(180deg, #302719, #1e1810);
+}
+
 .card-ornament {
   position: absolute;
   top: 7px;
@@ -376,6 +491,12 @@ mark {
   color: var(--teal-dark);
   font-family: Georgia, "Times New Roman", serif;
   font-weight: 900;
+}
+
+:root[data-theme="dark"] .avatar,
+:root[data-theme="dark"] .large-avatar {
+  background: radial-gradient(circle at 30% 20%, #f0cf78, #7a5524);
+  color: #082f31;
 }
 
 .avatar {
@@ -422,6 +543,11 @@ mark {
   backdrop-filter: blur(10px);
 }
 
+:root[data-theme="dark"] .minimap {
+  border-color: rgba(246, 234, 208, 0.15);
+  background: rgba(20, 16, 12, 0.86);
+}
+
 .mini-node {
   position: absolute;
   width: 8px;
@@ -457,6 +583,14 @@ mark {
     linear-gradient(180deg, rgba(255, 250, 240, 0.98), rgba(238, 222, 190, 0.96)),
     var(--paper);
   box-shadow: -18px 0 42px rgba(44, 29, 15, 0.1);
+}
+
+:root[data-theme="dark"] .inspector {
+  border-left-color: rgba(213, 166, 75, 0.25);
+  background:
+    linear-gradient(180deg, rgba(25, 19, 14, 0.98), rgba(37, 28, 19, 0.96)),
+    var(--paper);
+  box-shadow: -18px 0 42px rgba(0, 0, 0, 0.28);
 }
 
 .inspector-scroll {
@@ -564,6 +698,14 @@ textarea {
   outline: none;
 }
 
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  border-color: rgba(246, 234, 208, 0.16);
+  background: rgba(36, 28, 20, 0.92);
+  color: var(--ink);
+}
+
 textarea {
   min-height: 118px;
   resize: vertical;
@@ -575,6 +717,12 @@ textarea:disabled {
   opacity: 1;
   color: var(--ink);
   background: rgba(255, 253, 246, 0.5);
+}
+
+:root[data-theme="dark"] input:disabled,
+:root[data-theme="dark"] select:disabled,
+:root[data-theme="dark"] textarea:disabled {
+  background: rgba(36, 28, 20, 0.58);
 }
 
 .relation-group {
@@ -599,6 +747,11 @@ textarea:disabled {
   background: rgba(15, 107, 102, 0.07);
   color: var(--ink);
   text-align: left;
+}
+
+:root[data-theme="dark"] .relation-link {
+  border-color: rgba(81, 196, 184, 0.24);
+  background: rgba(81, 196, 184, 0.1);
 }
 
 .relation-link span,
@@ -666,6 +819,12 @@ textarea:disabled {
   box-shadow: 0 26px 80px rgba(18, 11, 6, 0.38);
 }
 
+:root[data-theme="dark"] .modal {
+  border-color: rgba(213, 166, 75, 0.28);
+  background: #1f1811;
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.58);
+}
+
 .modal h2 {
   font-family: Georgia, "Times New Roman", serif;
 }
@@ -717,6 +876,10 @@ textarea:disabled {
   font-weight: 850;
 }
 
+:root[data-theme="dark"] .toast {
+  background: #0b3f3f;
+}
+
 @media (max-width: 1100px) {
   .topbar {
     grid-template-columns: 1fr;
@@ -766,7 +929,7 @@ textarea:disabled {
   }
 
   .tool,
-  .language-toggle,
+  .preference-toggle,
   .mode-button {
     min-width: 0;
     width: 100%;
@@ -775,9 +938,20 @@ textarea:disabled {
   }
 
   .label-tool,
-  .language-toggle,
+  .preference-toggle,
   .mode-button {
     font-size: 0.76rem;
+  }
+
+  .preference-toggle {
+    grid-template-columns: 1fr;
+    gap: 1px;
+    justify-items: center;
+  }
+
+  .preference-toggle span,
+  .preference-toggle strong {
+    font-size: 0.72rem;
   }
 
   .workspace {

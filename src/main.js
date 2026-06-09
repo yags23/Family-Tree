@@ -1,4 +1,5 @@
 const STORAGE_KEY = "ottoman-family-tree-v1";
+const PREFS_KEY = "ottoman-family-tree-preferences-v1";
 const PASSWORD = "Idris";
 
 const i18n = {
@@ -19,6 +20,10 @@ const i18n = {
     import: "Import",
     undo: "Undo",
     redo: "Redo",
+    languageLabel: "Language",
+    themeLabel: "Theme",
+    lightMode: "Light",
+    darkMode: "Dark",
     selected: "Selected person",
     noSelection: "Select a person to see details.",
     addSpouse: "Add spouse",
@@ -70,6 +75,10 @@ const i18n = {
     import: "Ice aktar",
     undo: "Geri al",
     redo: "Yinele",
+    languageLabel: "Dil",
+    themeLabel: "Tema",
+    lightMode: "Aydinlik",
+    darkMode: "Karanlik",
     selected: "Secili kisi",
     noSelection: "Ayrintilari gormek icin bir kisi secin.",
     addSpouse: "Es ekle",
@@ -220,6 +229,8 @@ const seedData = {
   ],
 };
 
+const savedPreferences = loadPreferences();
+
 const state = {
   data: loadData(),
   history: [],
@@ -227,7 +238,8 @@ const state = {
   selectedId: "p-ali",
   highlightedIds: new Set(["p-ali"]),
   query: "",
-  language: "en",
+  language: savedPreferences.language,
+  theme: savedPreferences.theme,
   editMode: false,
   showPassword: false,
   passwordInput: "",
@@ -244,6 +256,26 @@ const app = document.querySelector("#app");
 
 function t(key) {
   return i18n[state.language][key] || i18n.en[key] || key;
+}
+
+function loadPreferences() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PREFS_KEY));
+    return {
+      language: stored?.language === "tr" ? "tr" : "en",
+      theme: stored?.theme === "dark" ? "dark" : "light",
+    };
+  } catch {
+    return { language: "en", theme: "light" };
+  }
+}
+
+function persistPreferences() {
+  localStorage.setItem(PREFS_KEY, JSON.stringify({ language: state.language, theme: state.theme }));
+}
+
+function applyTheme() {
+  document.documentElement.dataset.theme = state.theme;
 }
 
 function loadData() {
@@ -549,6 +581,7 @@ function childConnectorEntries() {
 }
 
 function render(options = {}) {
+  applyTheme();
   const selected = byId(state.selectedId);
   const matches = getMatches();
   app.innerHTML = `
@@ -577,7 +610,14 @@ function render(options = {}) {
           <button class="tool" data-action="redo" title="${t("redo")}" ${state.future.length ? "" : "disabled"}>↷</button>
           <button class="tool label-tool" data-action="export">${t("export")}</button>
           <label class="tool label-tool import-label">${t("import")}<input id="importFile" type="file" accept="application/json" hidden /></label>
-          <button class="language-toggle" data-action="language">${state.language === "en" ? "TR" : "EN"}</button>
+          <button class="preference-toggle language-toggle" data-action="language">
+            <span>${t("languageLabel")}</span>
+            <strong>${state.language === "en" ? "English" : "Turkish"}</strong>
+          </button>
+          <button class="preference-toggle theme-toggle" data-action="theme">
+            <span>${t("themeLabel")}</span>
+            <strong>${state.theme === "dark" ? t("darkMode") : t("lightMode")}</strong>
+          </button>
           <button class="mode-button ${state.editMode ? "active" : ""}" data-action="mode">${state.editMode ? t("lockView") : t("unlockEdit")}</button>
         </nav>
       </header>
@@ -1005,6 +1045,11 @@ function handleAction(action) {
       break;
     case "language":
       state.language = state.language === "en" ? "tr" : "en";
+      persistPreferences();
+      break;
+    case "theme":
+      state.theme = state.theme === "dark" ? "light" : "dark";
+      persistPreferences();
       break;
     case "mode":
       if (state.editMode) state.editMode = false;
