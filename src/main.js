@@ -38,6 +38,10 @@ const i18n = {
     spouse: "Spouse",
     children: "Children",
     parentChild: "Parent-child",
+    secondParent: "Second parent",
+    unknownParent: "Unknown parent",
+    chooseParent: "Search or choose parent",
+    alsoCreateSpouse: "Also create spouse/partner connection",
     noMatches: "No matching names",
     matches: "matches",
     addRelative: "Add relative",
@@ -85,6 +89,10 @@ const i18n = {
     spouse: "Es",
     children: "Cocuklar",
     parentChild: "Ebeveyn-cocuk",
+    secondParent: "Ikinci ebeveyn",
+    unknownParent: "Bilinmeyen ebeveyn",
+    chooseParent: "Ebeveyn ara veya sec",
+    alsoCreateSpouse: "Es/partner baglantisi da olustur",
     noMatches: "Eslestirme bulunamadi",
     matches: "eslesme",
     addRelative: "Akraba ekle",
@@ -317,16 +325,42 @@ function relationsFor(personId, type) {
 }
 
 function childrenOf(personId) {
+  const seen = new Set();
   return state.data.relationships
     .filter((rel) => rel.type === "parentChild" && rel.from === personId)
     .map((rel) => byId(rel.to))
-    .filter(Boolean);
+    .filter((person) => {
+      if (!person || seen.has(person.id)) return false;
+      seen.add(person.id);
+      return true;
+    });
 }
 
 function spousesOf(personId) {
   return relationsFor(personId, "spouse")
     .map((rel) => byId(rel.from === personId ? rel.to : rel.from))
     .filter(Boolean);
+}
+
+function isChildKind(kind = state.addKind) {
+  return kind === "son" || kind === "daughter" || kind === "child";
+}
+
+function isSpousePair(firstId, secondId) {
+  if (!firstId || !secondId) return false;
+  return state.data.relationships.some((rel) => rel.type === "spouse" && ((rel.from === firstId && rel.to === secondId) || (rel.from === secondId && rel.to === firstId)));
+}
+
+function parentsOf(childId) {
+  const seen = new Set();
+  return state.data.relationships
+    .filter((rel) => rel.type === "parentChild" && rel.to === childId)
+    .map((rel) => byId(rel.from))
+    .filter((person) => {
+      if (!person || seen.has(person.id)) return false;
+      seen.add(person.id);
+      return true;
+    });
 }
 
 function boundsForPeople(people) {
@@ -388,6 +422,11 @@ function addRelative(formData) {
   const selected = byId(state.selectedId);
   if (!selected) return;
   snapshot();
+  const isChild = isChildKind();
+  const secondParent = isChild ? byId(formData.secondParentId) : null;
+  const childCount = childrenOf(selected.id).length;
+  const childX = secondParent ? (selected.x + secondParent.x) / 2 + childCount * 80 : selected.x + 180 + childCount * 250;
+  const childY = selected.y + 270;
   const newPerson = {
     id: uniqueId("p"),
     name: formData.name || t("personName"),
@@ -396,12 +435,18 @@ function addRelative(formData) {
     deathDate: formData.deathDate,
     notes: formData.notes,
     photoUrl: formData.photoUrl,
-    x: selected.x + (state.addKind === "spouse" ? 280 : 180 + childrenOf(selected.id).length * 250),
-    y: selected.y + (state.addKind === "spouse" ? 0 : 270),
+    x: state.addKind === "spouse" ? selected.x + 280 : childX,
+    y: state.addKind === "spouse" ? selected.y : childY,
   };
   const relType = state.addKind === "spouse" ? "spouse" : "parentChild";
   state.data.people.push(newPerson);
   state.data.relationships.push({ id: uniqueId("r"), type: relType, from: selected.id, to: newPerson.id });
+  if (secondParent && secondParent.id !== selected.id) {
+    state.data.relationships.push({ id: uniqueId("r"), type: "parentChild", from: secondParent.id, to: newPerson.id });
+    if (formData.createSpouse === "on" && !isSpousePair(selected.id, secondParent.id)) {
+      state.data.relationships.push({ id: uniqueId("r"), type: "spouse", from: selected.id, to: secondParent.id });
+    }
+  }
   state.selectedId = newPerson.id;
   state.highlightedIds = new Set([newPerson.id]);
   state.showAdd = false;
@@ -478,6 +523,31 @@ function connectorPath(rel) {
   return `M ${a.x} ${a.y + 60} C ${a.x} ${midY}, ${b.x} ${midY}, ${b.x} ${b.y - 60}`;
 }
 
+function familyConnectorPath(parentA, parentB, child) {
+  const a = nodeCenter(parentA);
+  const c = nodeCenter(child);
+  const start = parentB ? { x: (a.x + nodeCenter(parentB).x) / 2, y: (a.y + nodeCenter(parentB).y) / 2 } : { x: a.x, y: a.y + 60 };
+  const midY = start.y + Math.max(80, (c.y - start.y) * 0.45);
+  return `M ${start.x} ${start.y} C ${start.x} ${midY}, ${c.x} ${midY}, ${c.x} ${c.y - 60}`;
+}
+
+function connectorIsHot(ids) {
+  return ids.some((id) => state.highlightedIds.has(id));
+}
+
+function childConnectorEntries() {
+  return state.data.people.flatMap((child) => {
+    const parents = parentsOf(child.id);
+    if (!parents.length) return [];
+    const spousePair = parents.length >= 2 ? parents.find((parent, index) => parents.slice(index + 1).some((other) => isSpousePair(parent.id, other.id))) : null;
+    if (spousePair) {
+      const otherParent = parents.find((parent) => parent.id !== spousePair.id && isSpousePair(parent.id, spousePair.id));
+      return [{ child, parentA: spousePair, parentB: otherParent }];
+    }
+    return parents.map((parent) => ({ child, parentA: parent, parentB: null }));
+  });
+}
+
 function render(options = {}) {
   const selected = byId(state.selectedId);
   const matches = getMatches();
@@ -538,6 +608,8 @@ function render(options = {}) {
 }
 
 function renderConnectors() {
+  const spouseLines = state.data.relationships.filter((rel) => rel.type === "spouse");
+  const childLines = childConnectorEntries();
   return `
     <svg class="connectors" width="2200" height="1100" viewBox="0 0 2200 1100" aria-hidden="true">
       <defs>
@@ -545,10 +617,16 @@ function renderConnectors() {
           <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#2e2118" flood-opacity="0.15" />
         </filter>
       </defs>
-      ${state.data.relationships
+      ${spouseLines
         .map((rel) => {
           const hot = state.highlightedIds.has(rel.from) || state.highlightedIds.has(rel.to);
           return `<path class="connector ${rel.type} ${hot ? "hot" : ""}" d="${connectorPath(rel)}" filter="url(#lineShadow)" />`;
+        })
+        .join("")}
+      ${childLines
+        .map(({ child, parentA, parentB }) => {
+          const ids = [child.id, parentA.id, parentB?.id].filter(Boolean);
+          return `<path class="connector parentChild ${parentB ? "family" : ""} ${connectorIsHot(ids) ? "hot" : ""}" d="${familyConnectorPath(parentA, parentB, child)}" filter="url(#lineShadow)" />`;
         })
         .join("")}
     </svg>
@@ -663,6 +741,15 @@ function renderPasswordModal() {
 
 function renderAddModal() {
   const gender = state.addKind === "son" ? "male" : state.addKind === "daughter" ? "female" : "unknown";
+  const selected = byId(state.selectedId);
+  const defaultSecondParent = selected ? spousesOf(selected.id)[0] : null;
+  const showParentFields = isChildKind();
+  const secondParentOptions = selected
+    ? state.data.people
+        .filter((person) => person.id !== selected.id)
+        .map((person) => `<option value="${person.id}" ${defaultSecondParent?.id === person.id ? "selected" : ""}>${escapeHtml(person.name)}${dateLine(person) ? ` (${escapeHtml(dateLine(person))})` : ""}</option>`)
+        .join("")
+    : "";
   return `
     <div class="modal-backdrop">
       <form class="modal add-modal">
@@ -675,6 +762,18 @@ function renderAddModal() {
         <label>${t("deathDate")}<input name="deathDate" /></label>
         <label>${t("notes")}<textarea name="notes"></textarea></label>
         <label>${t("photo")}<input name="photo" type="file" accept="image/*" /></label>
+        ${
+          showParentFields
+            ? `<label>${t("secondParent")}<select name="secondParentId" data-selected-parent="${selected?.id || ""}">
+                <option value="">${t("unknownParent")}</option>
+                ${secondParentOptions}
+              </select></label>
+              <label class="checkbox-row create-spouse-row ${defaultSecondParent || !selected ? "hidden" : ""}">
+                <input name="createSpouse" type="checkbox" />
+                <span>${t("alsoCreateSpouse")}</span>
+              </label>`
+            : ""
+        }
         <div class="modal-actions">
           <button type="button" data-action="cancel-add">${t("cancel")}</button>
           <button class="primary" type="submit">${t("save")}</button>
@@ -814,10 +913,25 @@ function bindEvents() {
       addRelative({ ...data, photoUrl: "" });
     }
   });
+
+  document.querySelector(".add-modal select[name='secondParentId']")?.addEventListener("change", updateSecondParentControls);
+  updateSecondParentControls();
 }
 
 function selectedExists() {
   return Boolean(byId(state.selectedId));
+}
+
+function updateSecondParentControls() {
+  const select = document.querySelector(".add-modal select[name='secondParentId']");
+  const row = document.querySelector(".create-spouse-row");
+  if (!select || !row) return;
+  const selectedParentId = select.dataset.selectedParent;
+  const secondParentId = select.value;
+  const shouldShow = Boolean(secondParentId && selectedParentId && !isSpousePair(selectedParentId, secondParentId));
+  row.classList.toggle("hidden", !shouldShow);
+  const checkbox = row.querySelector("input");
+  if (checkbox && !shouldShow) checkbox.checked = false;
 }
 
 function onPointerMove(event) {
